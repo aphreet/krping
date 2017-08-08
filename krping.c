@@ -514,11 +514,11 @@ static int krping_setup_buffers(struct krping_cb *cb)
 
 	DEBUG_LOG(PFX "krping_setup_buffers called on cb %p\n", cb);
 
-	cb->recv_dma_addr = ib_dma_map_single(cb->pd->device->dma_device, 
+	cb->recv_dma_addr = ib_dma_map_single(cb->pd->device, 
 				   &cb->recv_buf, 
 				   sizeof(cb->recv_buf), DMA_BIDIRECTIONAL);
 	pci_unmap_addr_set(cb, recv_mapping, cb->recv_dma_addr);
-	cb->send_dma_addr = ib_dma_map_single(cb->pd->device->dma_device, 
+	cb->send_dma_addr = ib_dma_map_single(cb->pd->device, 
 					   &cb->send_buf, sizeof(cb->send_buf),
 					   DMA_BIDIRECTIONAL);
 	pci_unmap_addr_set(cb, send_mapping, cb->send_dma_addr);
@@ -530,7 +530,7 @@ static int krping_setup_buffers(struct krping_cb *cb)
 		goto bail;
 	}
 
-	cb->rdma_dma_addr = ib_dma_map_single(cb->pd->device->dma_device, 
+	cb->rdma_dma_addr = ib_dma_map_single(cb->pd->device, 
 			       cb->rdma_buf, cb->size, 
 			       DMA_BIDIRECTIONAL);
 	pci_unmap_addr_set(cb, rdma_mapping, cb->rdma_dma_addr);
@@ -555,7 +555,7 @@ static int krping_setup_buffers(struct krping_cb *cb)
 			goto bail;
 		}
 
-		cb->start_dma_addr = ib_dma_map_single(cb->pd->device->dma_device, 
+		cb->start_dma_addr = ib_dma_map_single(cb->pd->device, 
 						   cb->start_buf, cb->size, 
 						   DMA_BIDIRECTIONAL);
 		pci_unmap_addr_set(cb, start_mapping, cb->start_dma_addr);
@@ -591,18 +591,18 @@ static void krping_free_buffers(struct krping_cb *cb)
 	if (cb->reg_mr)
 		ib_dereg_mr(cb->reg_mr);
 
-	ib_dma_unmap_single(cb->pd->device->dma_device,
+	ib_dma_unmap_single(cb->pd->device,
 			 pci_unmap_addr(cb, recv_mapping),
 			 sizeof(cb->recv_buf), DMA_BIDIRECTIONAL);
-	ib_dma_unmap_single(cb->pd->device->dma_device,
+	ib_dma_unmap_single(cb->pd->device,
 			 pci_unmap_addr(cb, send_mapping),
 			 sizeof(cb->send_buf), DMA_BIDIRECTIONAL);
-	ib_dma_unmap_single(cb->pd->device->dma_device,
+	ib_dma_unmap_single(cb->pd->device,
 			 pci_unmap_addr(cb, rdma_mapping),
 			 cb->size, DMA_BIDIRECTIONAL);
 	kfree(cb->rdma_buf);
 	if (cb->start_buf) {
-		ib_dma_unmap_single(cb->pd->device->dma_device,
+		ib_dma_unmap_single(cb->pd->device,
 			 pci_unmap_addr(cb, start_mapping),
 			 cb->size, DMA_BIDIRECTIONAL);
 		kfree(cb->start_buf);
