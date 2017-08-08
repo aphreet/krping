@@ -514,11 +514,11 @@ static int krping_setup_buffers(struct krping_cb *cb)
 
 	DEBUG_LOG(PFX "krping_setup_buffers called on cb %p\n", cb);
 
-	cb->recv_dma_addr = dma_map_single(cb->pd->device->dma_device, 
+	cb->recv_dma_addr = ib_dma_map_single(cb->pd->device->dma_device, 
 				   &cb->recv_buf, 
 				   sizeof(cb->recv_buf), DMA_BIDIRECTIONAL);
 	pci_unmap_addr_set(cb, recv_mapping, cb->recv_dma_addr);
-	cb->send_dma_addr = dma_map_single(cb->pd->device->dma_device, 
+	cb->send_dma_addr = ib_dma_map_single(cb->pd->device->dma_device, 
 					   &cb->send_buf, sizeof(cb->send_buf),
 					   DMA_BIDIRECTIONAL);
 	pci_unmap_addr_set(cb, send_mapping, cb->send_dma_addr);
@@ -530,7 +530,7 @@ static int krping_setup_buffers(struct krping_cb *cb)
 		goto bail;
 	}
 
-	cb->rdma_dma_addr = dma_map_single(cb->pd->device->dma_device, 
+	cb->rdma_dma_addr = ib_dma_map_single(cb->pd->device->dma_device, 
 			       cb->rdma_buf, cb->size, 
 			       DMA_BIDIRECTIONAL);
 	pci_unmap_addr_set(cb, rdma_mapping, cb->rdma_dma_addr);
@@ -555,7 +555,7 @@ static int krping_setup_buffers(struct krping_cb *cb)
 			goto bail;
 		}
 
-		cb->start_dma_addr = dma_map_single(cb->pd->device->dma_device, 
+		cb->start_dma_addr = ib_dma_map_single(cb->pd->device->dma_device, 
 						   cb->start_buf, cb->size, 
 						   DMA_BIDIRECTIONAL);
 		pci_unmap_addr_set(cb, start_mapping, cb->start_dma_addr);
@@ -591,18 +591,18 @@ static void krping_free_buffers(struct krping_cb *cb)
 	if (cb->reg_mr)
 		ib_dereg_mr(cb->reg_mr);
 
-	dma_unmap_single(cb->pd->device->dma_device,
+	ib_dma_unmap_single(cb->pd->device->dma_device,
 			 pci_unmap_addr(cb, recv_mapping),
 			 sizeof(cb->recv_buf), DMA_BIDIRECTIONAL);
-	dma_unmap_single(cb->pd->device->dma_device,
+	ib_dma_unmap_single(cb->pd->device->dma_device,
 			 pci_unmap_addr(cb, send_mapping),
 			 sizeof(cb->send_buf), DMA_BIDIRECTIONAL);
-	dma_unmap_single(cb->pd->device->dma_device,
+	ib_dma_unmap_single(cb->pd->device->dma_device,
 			 pci_unmap_addr(cb, rdma_mapping),
 			 cb->size, DMA_BIDIRECTIONAL);
 	kfree(cb->rdma_buf);
 	if (cb->start_buf) {
-		dma_unmap_single(cb->pd->device->dma_device,
+		ib_dma_unmap_single(cb->pd->device->dma_device,
 			 pci_unmap_addr(cb, start_mapping),
 			 cb->size, DMA_BIDIRECTIONAL);
 		kfree(cb->start_buf);
@@ -1582,58 +1582,6 @@ static void krping_rlat_test_client(struct krping_cb *cb)
 	while (cb->state < RDMA_WRITE_ADV) {
 		krping_cq_event_handler(cb->cq, cb);
 	}
-
-#if 0
-{
-	int i;
-	struct timeval start, stop;
-	time_t sec;
-	suseconds_t usec;
-	unsigned long long elapsed;
-	struct ib_wc wc;
-	struct ib_send_wr *bad_wr;
-	int ne;
-	
-	cb->rdma_sq_wr.wr.opcode = IB_WR_RDMA_WRITE;
-	cb->rdma_sq_wr.rkey = cb->remote_rkey;
-	cb->rdma_sq_wr.remote_addr = cb->remote_addr;
-	cb->rdma_sq_wr.wr.sg_list->length = 0;
-	cb->rdma_sq_wr.wr.num_sge = 0;
-
-	do_gettimeofday(&start);
-	for (i=0; i < 100000; i++) {
-		if (ib_post_send(cb->qp, &cb->rdma_sq_wr.wr, &bad_wr)) {
-			printk(KERN_ERR PFX  "Couldn't post send\n");
-			return;
-		}
-		do {
-			ne = ib_poll_cq(cb->cq, 1, &wc);
-		} while (ne == 0);
-		if (ne < 0) {
-			printk(KERN_ERR PFX "poll CQ failed %d\n", ne);
-			return;
-		}
-		if (wc.status != IB_WC_SUCCESS) {
-			printk(KERN_ERR PFX "Completion wth error at %s:\n",
-				cb->server ? "server" : "client");
-			printk(KERN_ERR PFX "Failed status %d: wr_id %d\n",
-				wc.status, (int) wc.wr_id);
-			return;
-		}
-	}
-	do_gettimeofday(&stop);
-	
-	if (stop.tv_usec < start.tv_usec) {
-		stop.tv_usec += 1000000;
-		stop.tv_sec  -= 1;
-	}
-	sec     = stop.tv_sec - start.tv_sec;
-	usec    = stop.tv_usec - start.tv_usec;
-	elapsed = sec * 1000000 + usec;
-	printk(KERN_ERR PFX "0B-write-lat iters 100000 usec %llu\n", elapsed);
-}
-#endif
-
 	rlat_test(cb);
 }
 
